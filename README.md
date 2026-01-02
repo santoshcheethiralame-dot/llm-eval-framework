@@ -13,32 +13,26 @@ Build an engineering-first framework that evaluates LLM reliability by:
 
 ## 🏗️ Current Status
 
-**Day 1 Complete** ✅
+**Day 2 Complete** ✅
 
-- FastAPI server with `/evaluate` endpoint
-- Pydantic schemas for input/output contracts
-- Basic evaluator with empty output detection
-- Auto-generated API documentation
+- 5 working evaluation rules (format + content)
+- Modular BaseRule abstract class
+- Dimension-based scoring (format_score, content_score)
+- Comprehensive test coverage with edge cases
+- Bug fixes and improvements
 
-## 🚀 Quick Start
+**Rules Implemented:**
 
-```bash
-# Setup
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
-
-# Run server
-uvicorn app.main:app --reload
-
-# Visit API docs
-# http://127.0.0.1:8000/docs
-```
+1. ✅ Empty Output Detection
+2. ✅ JSON Format Validation
+3. ✅ Length Constraint Checking
+4. ✅ Required Keywords Detection
+5. ✅ Forbidden Phrases Detection
 
 ## 📋 Roadmap
 
 - [x] Day 1: Project setup + basic API
-- [ ] Day 2: Core rule engine (format, length, keywords)
+- [x] Day 2: Core rule engine (format, length, keywords)
 - [ ] Day 3: Instruction adherence rules
 - [ ] Day 4: Prompt injection detection
 - [ ] Day 5: Hallucination heuristics
