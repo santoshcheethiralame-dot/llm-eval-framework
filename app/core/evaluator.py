@@ -1,4 +1,6 @@
 from app.schemas.evaluation import EvaluationRequest, EvaluationResponse, RuleResult
+from app.rules.format_rules import EmptyOutputRule, JSONFormatRule, LengthConstraintRule
+from app.rules.content_rules import RequiredKeywordsRule, ForbiddenPhrasesRule
 from datetime import datetime
 import uuid
 from typing import Dict, List
@@ -6,7 +8,13 @@ from typing import Dict, List
 class Evaluator:
 
     def __init__(self):
-        self.rules = []
+        self.rules = [
+            EmptyOutputRule(),
+            JSONFormatRule(),
+            LengthConstraintRule(),
+            RequiredKeywordsRule(),
+            ForbiddenPhrasesRule()
+        ]
 
     def evaluate(self, request: EvaluationRequest) -> EvaluationResponse:
         eval_id = f"eval_{uuid.uuid4().hex[:12]}"
@@ -35,25 +43,41 @@ class Evaluator:
         return response
 
     def _run_rules(self, request: EvaluationRequest) -> List[RuleResult]:
-        output = request.output
-        is_empty = len(output.strip()) == 0
+        results = []
 
-        dummy_rule = RuleResult(
-            rule_id="check_empty_output",
-            rule_name="empty output detection",
-            passed=not is_empty,
-            score=0.0 if is_empty else 1.0,
-            explanation="output is empty" if is_empty else "output contains text"
-        )
+        for rule in self.rules:
+            try:
+                result = rule.evaluate(request)
+                results.append(result)
+            except Exception as e:
+                results.append(
+                    RuleResult(
+                        rule_id=rule.rule_id,
+                        rule_name=rule.rule_name,
+                        passed=False,
+                        score=0.0,
+                        explanation=f"Rule execution failed: {str(e)}"
+                    )
+                )
 
-        return [dummy_rule]
+        return results
 
     def _aggregate_scores(self, rule_results: List[RuleResult]) -> Dict[str, float]:
-        format_score = rule_results[0].score if rule_results else 0.0
+        format_rules = ["empty_output", "json_format", "length_constraint"]
+        content_rules = ["required_keywords", "forbidden_phrases"]
 
-        return {
-            "format_score": format_score
-        }
+        format_scores = [r.score for r in rule_results if r.rule_id in format_rules]
+        content_scores = [r.score for r in rule_results if r.rule_id in content_rules]
+
+        scores = {}
+
+        if format_scores:
+            scores["format_score"] = sum(format_scores) / len(format_scores)
+
+        if content_scores:
+            scores["content_score"] = sum(content_scores) / len(content_scores)
+
+        return scores
 
     def _calculate_overall_score(self, scores: Dict[str, float]) -> float:
         if not scores:
@@ -64,8 +88,8 @@ class Evaluator:
         failures = []
 
         for result in rule_results:
-            if result.rule_id == "check_empty_output" and not result.passed:
-                failures.append("empty_output")
+            if not result.passed:
+                failures.append(result.rule_id)
 
         return failures
 
@@ -76,8 +100,8 @@ class Evaluator:
     ) -> Dict[str, str]:
         explanations = {}
 
-        for label in failure_labels:
-            if label == "empty_output":
-                explanations[label] = "The output provided by the model was empty."
+        for result in rule_results:
+            if not result.passed:
+                explanations[result.rule_id] = result.explanation
 
         return explanations
